@@ -25,7 +25,7 @@ namespace OpenTouch.Examples
         private void OnFingerDown(Finger finger)
         {
             RaycastHit2D hit;
-            if (TouchManager.DidHitAllCollider2D(finger.fingerId, _collider2D, out hit))
+            if (TouchHelper.DidHitAllCollider2D(ref finger, _collider2D, out hit))
             {
                 if (myEvent != null) myEvent.Invoke();
             }

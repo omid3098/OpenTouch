@@ -8,6 +8,8 @@ namespace OpenTouch.Examples
         [SerializeField] bool deSelectOnRelease = true;
         public FingerEvent onSelect;
         public FingerEvent onDeSelect;
+        private int selectedFingerID;
+
         public bool selected { get; private set; }
 
         private void Awake()
@@ -35,8 +37,9 @@ namespace OpenTouch.Examples
         private void OnFingerDown(Finger finger)
         {
             RaycastHit2D hit;
-            if (OpenTouch.TouchManager.DidHitCollider2D(finger.fingerId, _collider, out hit))
+            if (TouchHelper.DidHitCollider2D(ref finger, _collider, out hit))
             {
+                selectedFingerID = finger.fingerId;
                 if (deSelectOnRelease) selected = !selected;
                 else selected = true;
                 if (selected) { if (onSelect != null) onSelect.Invoke(finger); }
@@ -46,6 +49,7 @@ namespace OpenTouch.Examples
 
         private void OnFingerUp(Finger finger)
         {
+            if (selectedFingerID != finger.fingerId) return;
             if (deSelectOnRelease)
             {
                 if (selected)

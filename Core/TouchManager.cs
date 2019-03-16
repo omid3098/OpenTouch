@@ -4,7 +4,6 @@ using UnityEngine.Assertions;
 
 namespace OpenTouch
 {
-
     /// <summary>
     /// I think the fastest way to support multiplatform touch between editor/standalone and mobile is to convert 
     /// editor or standalone clicks into touches and use the same functionalities between them.
@@ -24,23 +23,6 @@ namespace OpenTouch
         public static System.Action<Finger> OnFingerTap;
         public static System.Action<Finger, SwipeDirection> OnFingerSwipe;
         public static System.Action<Finger> OnFingerGesture;
-        static Camera touchCamera;
-
-        // We store last finger id and last ray casted from camera so if we need to calculate hit data from the same 
-        // finger, we wont recast a new ray
-        private static int cachedAllFingerID2D = -1;
-        private static int cachedAllFingerID = -1;
-        private static int cachedFingerID2D = -1;
-        private static int cachedFingerID = -1;
-
-        // used for RaycastAll methods
-        private static RaycastHit2D[] cachedAllHitInfos2D;
-        // used for RaycastAll methods
-        private static RaycastHit[] cachedAllHitInfos;
-        // used for Raycast method
-        private static RaycastHit2D cachedHitInfo2D;
-        // used for Raycast method
-        private static RaycastHit cachedHitInfo;
         private static TouchManager instance;
         private static bool initialized;
         private float startTapTime;
@@ -61,13 +43,8 @@ namespace OpenTouch
             DontDestroyOnLoad(gameObject);
             fingers = new List<Finger>();
             expiredIds = new List<int>();
-            touchCamera = Camera.main;
+            TouchHelper.SetCamera(Camera.main);
             startTapTime = -1;
-        }
-
-        public static void SetCamera(Camera camera)
-        {
-            touchCamera = camera;
         }
 
         private void Update()
@@ -159,8 +136,6 @@ namespace OpenTouch
                             startTapTime = Time.realtimeSinceStartup;
                             break;
                         case TouchPhase.Ended:
-                            cachedFingerID = -1;
-                            cachedFingerID2D = -1;
                             if (finger != null)
                             {
                                 finger.deltaPosition = touch.position - finger.position;
@@ -170,6 +145,7 @@ namespace OpenTouch
                                 if (startTapTime != -1) if (Time.realtimeSinceStartup - startTapTime < tapThreashold) if (OnFingerTap != null) OnFingerTap.Invoke(fingers[0]);
                                 CheckSwipe(finger);
                                 if (OnFingerUp != null) OnFingerUp.Invoke(finger);
+                                TouchHelper.ClearCache();
                             }
                             break;
                         case TouchPhase.Moved:
@@ -233,140 +209,5 @@ namespace OpenTouch
             else expiredIds.Add(id);
             return id;
         }
-
-        #region public methods
-
-        /// <summary>
-        /// RaycastAll to check if passed collider is hit among them or not? use when you want to click or drag overlapped objects
-        /// </summary>
-        /// <param name="fingerID"></param>
-        /// <param name="collider"></param>
-        /// <param name="rayHit"></param>
-        /// <returns></returns>
-        public static bool DidHitAllCollider(int fingerID, Collider collider, out RaycastHit rayHit)
-        {
-            if (cachedAllFingerID != fingerID)
-            {
-                Finger finger = null;
-                for (int i = 0; i < fingers.Count; i++)
-                {
-                    if (fingers[i].fingerId == fingerID)
-                    {
-                        finger = fingers[i];
-                        break;
-                    }
-                }
-                if (finger != null)
-                {
-                    cachedAllFingerID = finger.fingerId;
-                    Vector3 worldPos = touchCamera.ScreenToWorldPoint(finger.position);
-                    cachedAllHitInfos = Physics.RaycastAll(worldPos, Vector3.forward, float.PositiveInfinity);
-                }
-            }
-            foreach (var _rayHit in cachedAllHitInfos)
-            {
-                if (_rayHit.collider == collider)
-                {
-                    rayHit = _rayHit;
-                    return true;
-                }
-            }
-            rayHit = new RaycastHit();
-            return false;
-        }
-
-        /// <summary>
-        /// RaycastAll to check if passed 2D collider is hit among them or not? use when you want to click or drag overlapped objects
-        /// </summary>
-        /// <param name="fingerID"> finger ID that you want to check if hit happend with</param>
-        /// <param name="collider2D">pass your collider2d to check with finger ID</param>
-        /// <param name="rayHit2D">we will out hitinfo back, so you can use it if you want</param>
-        /// <returns>returns true if this collider is under finger</returns>
-        public static bool DidHitAllCollider2D(int fingerID, Collider2D collider2D, out RaycastHit2D rayHit2D)
-        {
-            // if this fingerID is the last one, use the cached raycast hit infor
-            if (cachedAllFingerID2D != fingerID)
-            {
-                Finger finger = null;
-                for (int i = 0; i < fingers.Count; i++)
-                {
-                    if (fingers[i].fingerId == fingerID)
-                    {
-                        finger = fingers[i];
-                        break;
-                    }
-                }
-                if (finger != null)
-                {
-                    cachedAllFingerID2D = finger.fingerId;
-                    Vector3 worldPos = touchCamera.ScreenToWorldPoint(finger.position);
-                    cachedAllHitInfos2D = Physics2D.RaycastAll(worldPos, Vector3.forward, float.PositiveInfinity);
-                    // Debug.DrawRay(worldPos, new Vector3(worldPos.x, worldPos.y, 20), Color.green, 100.0f);
-                }
-            }
-            foreach (var _rayHit2D in cachedAllHitInfos2D)
-            {
-                if (_rayHit2D.collider == collider2D)
-                {
-                    rayHit2D = _rayHit2D;
-                    return true;
-                }
-            }
-            rayHit2D = new RaycastHit2D();
-            return false;
-        }
-
-        public static bool DidHitCollider2D(int fingerID, Collider2D collider2D, out RaycastHit2D rayHit2D)
-        {
-            // if this fingerID is the last one, use the cached raycast hit infor
-            if (cachedFingerID2D != fingerID)
-            {
-                Finger finger = null;
-                for (int i = 0; i < fingers.Count; i++)
-                {
-                    if (fingers[i].fingerId == fingerID)
-                    {
-                        finger = fingers[i];
-                        break;
-                    }
-                }
-                if (finger != null)
-                {
-                    cachedFingerID2D = finger.fingerId;
-                    Vector3 worldPos = touchCamera.ScreenToWorldPoint(finger.position);
-                    cachedHitInfo2D = Physics2D.Raycast(worldPos, Vector3.forward, float.PositiveInfinity);
-                    // Debug.DrawRay(worldPos, new Vector3(worldPos.x, worldPos.y, 20), Color.green, 100.0f);
-                }
-            }
-            rayHit2D = cachedHitInfo2D;
-            return (cachedHitInfo2D.collider == collider2D);
-        }
-
-        public static bool DidHitCollider(int fingerID, Collider collider, out RaycastHit rayHit)
-        {
-            // if this fingerID is the last one, use the cached raycast hit infor
-            if (cachedFingerID != fingerID)
-            {
-                Finger finger = null;
-                for (int i = 0; i < fingers.Count; i++)
-                {
-                    if (fingers[i].fingerId == fingerID)
-                    {
-                        finger = fingers[i];
-                        break;
-                    }
-                }
-                if (finger != null)
-                {
-                    cachedFingerID = finger.fingerId;
-                    Vector3 worldPos = touchCamera.ScreenToWorldPoint(finger.position);
-                    Physics.Raycast(worldPos, Vector3.forward, out cachedHitInfo, float.PositiveInfinity);
-                    // Debug.DrawRay(worldPos, new Vector3(worldPos.x, worldPos.y, 20), Color.green, 100.0f);
-                }
-            }
-            rayHit = cachedHitInfo;
-            return (cachedHitInfo.collider == collider);
-        }
-        #endregion
     }
 }

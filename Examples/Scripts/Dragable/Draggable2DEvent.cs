@@ -40,7 +40,7 @@ namespace OpenTouch.Examples
         private void OnFingerDown(Finger finger)
         {
             RaycastHit2D hit;
-            if (OpenTouch.TouchManager.DidHitCollider2D(finger.fingerId, _collider, out hit))
+            if (TouchHelper.DidHitCollider2D(ref finger, _collider, out hit))
             {
                 draggingFinger = finger;
                 if (onDragStart != null) onDragStart.Invoke(finger);

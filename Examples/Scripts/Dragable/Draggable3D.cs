@@ -33,7 +33,7 @@ namespace OpenTouch.Examples
         private void OnFingerDown(Finger finger)
         {
             RaycastHit hit;
-            if (OpenTouch.TouchManager.DidHitCollider(finger.fingerId, _collider, out hit))
+            if (TouchHelper.DidHitCollider(ref finger, _collider, out hit))
             {
                 offset = Vector2.zero;
                 touched = true;
