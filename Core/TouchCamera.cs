@@ -19,7 +19,7 @@ namespace OpenTouch
         }
         private void Awake()
         {
-            TouchHelper.SetCamera(touchCamera);
+            TouchManager.SetCamera(touchCamera);
         }
     }
 }

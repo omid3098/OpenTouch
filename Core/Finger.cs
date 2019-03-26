@@ -15,8 +15,11 @@ namespace OpenTouch
     public class Finger
     {
         // Summary:
+        //     The unique id for the touch.
+        public string guid { get; set; }
+        // Summary:
         //     The unique index for the touch.
-        public int fingerId { get; set; }
+        public int touchId { get; set; }
         // Summary:
         //     The starting position of the touch in pixel coordinates.
         public Vector2 startPosition { get; set; }
