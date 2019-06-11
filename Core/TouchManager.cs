@@ -26,7 +26,7 @@ namespace OpenTouch
         public static System.Action<Finger> OnFingerTap;
         public static System.Action<Finger, SwipeDirection> OnFingerSwipe;
         public static System.Action<Finger> OnFingerGesture;
-        static Camera touchCamera;
+        public static Camera touchCamera { get; private set; }
 
         // We store last finger id and last ray casted from camera so if we need to calculate hit data from the same 
         // finger, we wont recast a new ray
@@ -69,6 +69,7 @@ namespace OpenTouch
 
         public static void SetCamera(Camera camera)
         {
+            if (!initialized) Initialize();
             touchCamera = camera;
         }
 
@@ -142,7 +143,7 @@ namespace OpenTouch
                 // Debug.Log("TouchCount > 0");
                 foreach (var touch in Input.touches)
                 {
-                    Finger finger = fingers.Find(x => x.touchId == touch.fingerId && x.active == true);
+                    Finger finger;
                     switch (touch.phase)
                     {
                         case TouchPhase.Began:
@@ -152,6 +153,7 @@ namespace OpenTouch
                                 finger = fingers[inactiveFinger];
                             else finger = new Finger();
                             finger.guid = GetGuid();
+                            finger.duration = 0;
                             finger.touchId = touch.fingerId;
                             finger.position = touch.position;
                             finger.startPosition = touch.position;
@@ -165,6 +167,7 @@ namespace OpenTouch
                         case TouchPhase.Ended:
                             cachedFingerID = "";
                             cachedFingerID2D = "";
+                            finger = fingers.Find(x => x.touchId == touch.fingerId && x.active == true);
                             if (finger != null)
                             {
                                 finger.deltaPosition = touch.position - finger.position;
@@ -175,8 +178,17 @@ namespace OpenTouch
                                 CheckSwipe(finger);
                                 if (OnFingerUp != null) OnFingerUp.Invoke(finger);
                             }
+                            else
+                            {
+                                Debug.LogError("Touch Ended but we did not have any fingers for this touch: ");
+                                foreach (var __finger in fingers)
+                                {
+                                    Debug.Log(__finger.touchId + " - vs - " + touch.fingerId);
+                                }
+                            }
                             break;
                         case TouchPhase.Moved:
+                            finger = fingers.Find(x => x.touchId == touch.fingerId && x.active == true);
                             if (finger != null)
                             {
                                 finger.deltaPosition = touch.position - finger.position;
@@ -186,8 +198,17 @@ namespace OpenTouch
                                 if (OnFingerSet != null) OnFingerSet.Invoke(finger);
                                 if (startTapTime != -1) if (Time.realtimeSinceStartup - startTapTime >= tapThreashold) startTapTime = -1;
                             }
+                            else
+                            {
+                                Debug.LogError("Touch Moved but we did not have any fingers for this touch: ");
+                                foreach (var __finger in fingers)
+                                {
+                                    Debug.Log(__finger.touchId + " - vs - " + touch.fingerId);
+                                }
+                            }
                             break;
                         case TouchPhase.Stationary:
+                            finger = fingers.Find(x => x.touchId == touch.fingerId && x.active == true);
                             if (finger != null)
                             {
                                 finger.deltaPosition = touch.position - finger.position;
@@ -196,6 +217,14 @@ namespace OpenTouch
                                 finger.phase = TouchPhase.Stationary;
                                 if (OnFingerSet != null) OnFingerSet.Invoke(finger);
                                 if (startTapTime != -1) if (Time.realtimeSinceStartup - startTapTime >= tapThreashold) startTapTime = -1;
+                            }
+                            else
+                            {
+                                Debug.LogError("Touch Stayed but we did not have any fingers for this touch: ");
+                                foreach (var __finger in fingers)
+                                {
+                                    Debug.Log(__finger.touchId + " - vs - " + touch.fingerId);
+                                }
                             }
                             break;
                     }
@@ -209,6 +238,7 @@ namespace OpenTouch
             var swipeDistance = swipeFinger.position - swipeFinger.startPosition;
             float absDistanceX = Mathf.Abs(swipeDistance.x);
             float absDistanceY = Mathf.Abs(swipeDistance.y);
+            // Debug.Log("touch ended. checking swipe: distance x = " + absDistanceX + " - distance y = " + absDistanceY);
             if (absDistanceX > swipeThreashold || absDistanceY > swipeThreashold)
             {
                 if (swipeFinger.duration < swipeDuration)
@@ -260,8 +290,8 @@ namespace OpenTouch
                 if (finger != null)
                 {
                     cachedAllFingerID = finger.guid;
-                    Vector3 worldPos = touchCamera.ScreenToWorldPoint(finger.position);
-                    cachedAllHitInfos = Physics.RaycastAll(worldPos, Vector3.forward, float.PositiveInfinity);
+                    Ray ray = touchCamera.ScreenPointToRay(new Vector3(finger.position.x, finger.position.y, 0));
+                    cachedAllHitInfos = Physics.RaycastAll(ray, touchCamera.farClipPlane);
                 }
             }
             foreach (var _rayHit in cachedAllHitInfos)

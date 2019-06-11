@@ -5,10 +5,9 @@ namespace OpenTouch.Examples
     public class Selectable2DEvent : MonoBehaviour
     {
         [SerializeField] Collider2D _collider;
-        [SerializeField] bool deSelectOnRelease = true;
         public FingerEvent onSelect;
         public FingerEvent onDeSelect;
-        private int selectedFingerID;
+        private string selectedFingerGUID = "";
 
         public bool selected { get; private set; }
 
@@ -37,26 +36,25 @@ namespace OpenTouch.Examples
         private void OnFingerDown(Finger finger)
         {
             RaycastHit2D hit;
-            if (TouchHelper.DidHitCollider2D(ref finger, _collider, out hit))
+            if (OpenTouch.TouchManager.DidHitCollider2D(finger.guid, _collider, out hit))
             {
-                selectedFingerID = finger.fingerId;
-                if (deSelectOnRelease) selected = !selected;
-                else selected = true;
-                if (selected) { if (onSelect != null) onSelect.Invoke(finger); }
-                else { if (onDeSelect != null) onDeSelect.Invoke(finger); }
+                selectedFingerGUID = finger.guid;
+                selected = true;
+                if (onSelect != null) onSelect.Invoke(finger);
             }
         }
 
         private void OnFingerUp(Finger finger)
         {
-            if (selectedFingerID != finger.fingerId) return;
-            if (deSelectOnRelease)
+            if (selectedFingerGUID == finger.guid)
             {
+                Debug.Log("selected GUID: " + selectedFingerGUID + " - new GUID: " + finger.guid);
                 if (selected)
                 {
                     if (onDeSelect != null) onDeSelect.Invoke(finger);
                     selected = false;
                 }
+                selectedFingerGUID = "";
             }
         }
     }

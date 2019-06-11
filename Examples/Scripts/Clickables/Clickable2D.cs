@@ -6,28 +6,28 @@ namespace OpenTouch.Examples
     public class Clickable2D : MonoBehaviour
     {
         [SerializeField] Collider2D _collider2D;
-        [SerializeField] UnityEvent myEvent;
-        private void Awake()
+        [SerializeField] public UnityEvent onClickEvent;
+        protected virtual void Awake()
         {
             if (_collider2D == null) _collider2D = GetComponent<Collider2D>();
-            if (myEvent == null) myEvent = new UnityEvent();
+            if (onClickEvent == null) onClickEvent = new UnityEvent();
         }
-        private void OnEnable()
+        protected virtual void OnEnable()
         {
             TouchManager.OnFingerDown += OnFingerDown;
         }
 
-        private void OnDisable()
+        protected virtual void OnDisable()
         {
             TouchManager.OnFingerDown -= OnFingerDown;
         }
 
-        private void OnFingerDown(Finger finger)
+        protected virtual void OnFingerDown(Finger finger)
         {
             RaycastHit2D hit;
-            if (TouchHelper.DidHitAllCollider2D(ref finger, _collider2D, out hit))
+            if (TouchManager.DidHitAllCollider2D(finger.guid, _collider2D, out hit))
             {
-                if (myEvent != null) myEvent.Invoke();
+                if (onClickEvent != null) onClickEvent.Invoke();
             }
         }
     }
